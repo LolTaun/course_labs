@@ -92,3 +92,12 @@ site
 
 # Node.js
 node_modules/
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+
+
+* - Copy
