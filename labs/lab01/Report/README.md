@@ -81,7 +81,7 @@ git branch -d patch1
 git checkout -b patch2
 ```
 20. Измените *code style* по своему усмотрению
-![](https://raw.githubusercontent.com/LolTaun/course_labs/refs/heads/lab1/labs/lab01/Report/img/20-1.png)
+![alt text](https://raw.githubusercontent.com/LolTaun/course_labs/refs/heads/lab1/labs/lab01/Report/img/20-1.png)
 ![alt text](https://raw.githubusercontent.com/LolTaun/course_labs/refs/heads/lab1/labs/lab01/Report/img/20-2.png)
 21. Сделайте публикацию своего `commit` с флагом `-S` в удаленный репозиторий исоздайте pull-request `patch2 -> master`
 ID коммита: e0c0f8b
@@ -113,11 +113,12 @@ ID коммита: 3e2f07d
 
 
 ### Дополнительный вопрос
-**Права разных типов контрибьюторов на GitHub**
+#### Права разных типов контрибьюторов на GitHub
 - Read – смотреть код, Issues, PR, форкать, комментировать.
 - Triage – всё как Read + метки, закрытие/открытие Issues и PR, управление без записи кода.
 - Write – пушить в ветки (где разрешено), создавать/мерджить PR, управлять wiki и т.п.
 - Maintain – всё как Write + управление настройками репо (ветки, команды, webhooks), но без полного админства.
 - Admin – полный контроль: смена видимости, удаление репо, управление доступами других.
+
 ---
 Copyright (c) 2025 Denis Kuznetsov
