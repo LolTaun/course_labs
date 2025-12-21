@@ -637,5 +637,7 @@ loltaun@LT-New:~/course_lab1$ git log --oneline --graph --decorate --all
 ```
 
 - [x] 16. Подготовьте отчет `gist`.
-https://gist.github.com/LolTaun/dba58dc3313e629db00a92f61ff596e7
+https://gist.github.com/LolTaun/95444f23a33dda60cfcf54ce5244d0fe
 ***
+
+Copyright (c) 2025 Denis Kuznetsov
