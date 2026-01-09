@@ -555,26 +555,32 @@ secrets:
 
 Главные меры: убрать privileged/host network/pid и docker.sock, переключиться на non-root + no-new-privileges, включить healthcheck/restart, использовать secrets вместо ENV, пиновать образы, задавать read-only rootfs и tmpfs для данных.
 
-- [ ] 8. Сделайте анализ уязвимостей из сгенерированных файлов .odt, .xslx и опишите их в отчете. Файлы конвертируются в эти директории
+- [x] 8. Сделайте анализ уязвимостей из сгенерированных файлов .odt, .xslx и опишите их в отчете.
 
-Краткий разбор по отчетам Trivy (xlsx/odt):
-- docker/docker-bench-security (alpine 3.8 EOL): множество устаревших пакетов без патчей; использовать поддерживаемый базовый образ. Отчеты: [labs/lab06/audit_reports/xlsx/docker-bench-security-trivy.xlsx](labs/lab06/audit_reports/xlsx/docker-bench-security-trivy.xlsx), [labs/lab06/audit_reports/odt/docker-bench-security-trivy.odt](labs/lab06/audit_reports/odt/docker-bench-security-trivy.odt).
-- nginx:alpine (3.23): присутствуют уязвимости средней/высокой важности в базовых библиотеках Alpine; планово обновлять образ до свежего минорного релиза и пересобирать. Отчеты: [audit_reports/xlsx/nginx-alpine-trivy.xlsx](audit_reports/xlsx/nginx-alpine-trivy.xlsx), [audit_reports/odt/nginx-alpine-trivy.odt](audit_reports/odt/nginx-alpine-trivy.odt).
-- python:3.11-alpine (3.23): уязвимости в системных пакетах и питон-зависимостях; требуется обновление образа и зависимостей, пиновать версии. Отчеты: [audit_reports/xlsx/python-3.11-alpine-trivy.xlsx](audit_reports/xlsx/python-3.11-alpine-trivy.xlsx), [audit_reports/odt/python-3.11-alpine-trivy.odt](audit_reports/odt/python-3.11-alpine-trivy.odt).
-- postgres:16-alpine (3.23): найденные CVE в базовых библиотеках и исполняемых файлах; обновить образ до последнего патча и пересобрать. Отчеты: [audit_reports/xlsx/postgres-16-alpine-trivy.xlsx](audit_reports/xlsx/postgres-16-alpine-trivy.xlsx), [audit_reports/odt/postgres-16-alpine-trivy.odt](audit_reports/odt/postgres-16-alpine-trivy.odt).
+| Место (образ) | CVE | Уровень | Описание | Анализ/мера |
+| --- | --- | --- | --- | --- |
+| docker/docker-bench-security (alpine 3.8.2, EOL) | CVE-2019-9893(libseccomp 2.3.3-r1 -> 2.4.0-r0) | CRITICAL | Некорректныеsyscall-фильтры -> обход seccomp | Обновить на alpine 3.18+/3.19+,пересобрать (libseccomp обновится) |
+| docker/docker-bench-security (alpine 3.8.2, EOL) | CVE-2019-14697(musl/musl-utils 1.1.19-r10 -> 1.1.19-r11) | CRITICAL | x87 FP stack bug-> возможный RCE/priv-esc | Обновить на alpine 3.18+/3.19+, пересобрать(musl обновится) |
+| nginx:alpine | - | - | - | - |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-58183 (archivetar) | HIGH | Unbounded alloc при парсинге GNU sparse -> DoS | Обновитьgosu/Go до 1.24.11+ или 1.25.5+, либо ждать новый образ |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-61729 (cryptox509) | HIGH | Печать ошибок валидации сертификатов грузит CPU -> DoS |То же: gosu c Go 1.24.11+/1.25.5+ |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-47912 (neturl) | MEDIUM | Невалидная проверка bracketed IPv6 -> обход фильтров |Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-58185 (encodingasn1) | MEDIUM | Разбор DER исчерпывает память -> DoS | Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-58186 (nethttp) | MEDIUM | Нет лимита cookies -> DoS по памяти | Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-58187 (cryptox509) | MEDIUM | Квадратичная проверка name constraints -> CPU DoS |Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-58188 (cryptox509) | MEDIUM | Panic при DSA ключах -> падение TLS | Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-58189 (cryptotls) | MEDIUM | ALPN negotiation leak данных атакующего | Обновить gosuGo |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-61723 (encodingpem) | MEDIUM | Квадратичная сложность на невалидных PEM -> CPU DoS |Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-61724 (nettextproto) | MEDIUM | Reader.ReadResponse жрет CPU -> DoS | Обновить gosuGo |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-61725 (netmail) | MEDIUM | ParseAddress жрет CPU -> DoS | Обновить gosu/Go |
+| postgres:16-alpine (gosu Go 1.24.6 stdlib) | CVE-2025-61727 (cryptox509) | MEDIUM | wildcard SAN не ограничен excluded subdomain -> обходполитики имен | Обновить gosu/Go |
+| python:3.11-alpine | CVE-2025-8869 (pip 24.0 -> 25.3) | MEDIUM | pip непроверяет symlink при распаковке -> перезапись файлов | Обновить pip до25.3+ при сборке образа |
 
-Главные выводы из отчетов: обновлять базовые образы до актуальных патчей, избегать старые версии ОС (alpine 3.8), пересобрать собственные образы после фиксов, добавить healthcheck и non-root пользователей.
+- [x] 9. Подготовьте отчет `gist`.
 
-```bash
-"├── json/          (Trivy JSON outputs)"
-"├── text/          (CIS audit text outputs)"
-"├── xlsx/          (Excel spreadsheets)"
-"└── odt/           (OpenDocument Text files)"
-```
+https://gist.github.com/LolTaun/96a809fd906ca45b34641afde6bdea06
 
-- [ ] 9. Подготовьте отчет `gist`.
-Это он и есть ;)
-- [ ] 10. Почистите кеш от `venv` и остановите уязвимостей приложение, почистите контейнера
+- [x] 10. Почистите кеш от `venv` и остановите уязвимостей приложение, почистите контейнера
 
 ```bash
 $ rm -rf venv
@@ -584,17 +590,5 @@ $ docker system prune -f
  
 ***
 
-## Troobleshooting
-
-- Права для исполнения скрипта
-
-```bash
-$ chmod +x xxx.sh # разрешение прав при permission denied
-```
-
-- На macOS/AArch64 docker-bench-security может не запускаться из‑за ограничений Docker Desktop и это работает для Linux‑VM. На Mac используем Trivy‑скан и разбор конфигурации compose‑файлов.
-
-
-***
 
 Copyright (c) 2025 Denis Kuznetsov
