@@ -88,7 +88,6 @@ def search():
 
     template = """
     <h2>Поиск пользователя</h2>
-    <p>Запрос: <code>{{ query }}</code></p>
     {% if error %}
       <p style="color:red;">SQL error: {{ error }}</p>
     {% endif %}
@@ -220,6 +219,25 @@ def ping():
     output = proc.read()
     proc.close()
     return f"<h2>Ping result for {host}</h2><pre>{output}</pre><a href='/'>Назад</a>"
+
+
+@app.after_request
+def set_security_headers(resp):
+    # Medium vuln fixes: CSP, anti-clickjacking
+    resp.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'; "
+        "base-uri 'self'"
+    )
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    return resp
 
 
 if __name__ == "__main__":
