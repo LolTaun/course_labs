@@ -8,6 +8,8 @@ from flask import (
 )
 import sqlite3
 import os
+from werkzeug.serving import WSGIRequestHandler
+
 
 app = Flask(__name__)
 
@@ -54,7 +56,8 @@ def index():
     </ul>
     """
     resp = make_response(html)
-    resp.set_cookie("session", "guest-session-id")
+    # Low: HttpOnly + SameSite
+    resp.set_cookie("session", "guest-session-id", httponly=True, samesite="Lax")
     return resp
 
 
@@ -223,7 +226,7 @@ def ping():
 
 @app.after_request
 def set_security_headers(resp):
-    # Medium vuln fixes: CSP, anti-clickjacking
+    # Medium vuln fixes: CSP completeness, anti-clickjacking
     resp.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self'; "
@@ -237,9 +240,20 @@ def set_security_headers(resp):
         "base-uri 'self'"
     )
     resp.headers.setdefault("X-Frame-Options", "DENY")
+    # Low: X-Content-Type-Options MIME-sniffing
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    # Low: Permissions-Policy
+    resp.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+    # Low: mitigate Spectre via isolation headers
+    resp.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    resp.headers.setdefault("Cross-Origin-Embedder-Policy", "require-corp")
+    resp.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
     return resp
 
 
 if __name__ == "__main__":
+    # Low: hide server version
+    WSGIRequestHandler.server_version = "BestSecureServer 1.0"
+    WSGIRequestHandler.sys_version = ""
     init_db()
     app.run(host="0.0.0.0", port=8080, debug=True)  # nosec B201,B104
