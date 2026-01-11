@@ -266,7 +266,9 @@ def set_security_headers(resp):
     # Low: X-Content-Type-Options MIME-sniffing
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     # Low: Permissions-Policy
-    resp.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+    resp.headers.setdefault(
+        "Permissions-Policy", "camera=(), geolocation=(), microphone=()"
+    )
     # Low: mitigate Spectre via isolation headers
     resp.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
     resp.headers.setdefault("Cross-Origin-Embedder-Policy", "require-corp")
