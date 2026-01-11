@@ -306,12 +306,12 @@ FAIL-NEW: 0     FAIL-INPROG: 0  WARN-NEW: 13    WARN-INPROG: 0  INFO: 0 IGNORE: 
 
 - [x] 9. Изучите сгенерированные отчеты в `dast/reports` и опишите риски ИБ для них, без сценариев, так как ранее вы видели часть из их реализации
 
-#### Medium
+### Medium
 - Content Security Policy (CSP) Header Not Set может привести к расширенным векторам атаки XSS и подгрузке вредоносных ресурсов.
 - Missing Anti-clickjacking Header (X-Frame-Options) может привести к риску кликджекинга и несанкционированных действий.
 - Source Code Disclosure - SQL может привести к помощи атакующему в SQLi и обходах.
 
-#### Low
+### Low
 - Cookie No HttpOnly Flag может привести к риску кражи сессии при XSS.
 - Cookie without SameSite Attribute может привести к повышенному риску CSRF и утечки cookie кросс-домен.
 - Insufficient Site Isolation Against Spectre может привести к риску межсайтового чтения данных в браузере.
@@ -319,7 +319,7 @@ FAIL-NEW: 0     FAIL-INPROG: 0  WARN-NEW: 13    WARN-INPROG: 0  INFO: 0 IGNORE: 
 - Server Leaks Version Information может привести к упрощению подбора известных уязвимостей.
 - X-Content-Type-Options Header Missing (MIME-sniffing) может привести к риску XSS через подмену типа контента.
 
-#### Info
+### Info
 - Authentication Request Identified может упростить таргетирование формы логина и подбор атак на аутентификацию.
 - Information Disclosure in URL (GET) может привести к утечке данных в логах и реферерерах.
 - Раскрытие внутренних IP/сетей в ответах может привести к оглашению топологии сети.
