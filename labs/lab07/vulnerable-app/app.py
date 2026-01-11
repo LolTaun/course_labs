@@ -77,6 +77,7 @@ def backup():
     subprocess.call(cmd)
     return f"Backup to {target} started"
 
+
 # Не имеет смысла, так как нет необходимости показывать файл
 # /etc/passwd, специально выделенной директории для чтения файлов нет.
 # @app.route("/read")
