@@ -50,6 +50,7 @@ def index():
       <li><a href="/profile">Профиль (зависит от cookie)</a></li>
       <li><a href="/admin">«Админка» без нормальной авторизации</a></li>
       <li><a href="/files/">Directory listing</a></li>
+      <li><a href="/ping?host=127.0.0.1">Проверка ping</a></li>
     </ul>
     """
     resp = make_response(html)
@@ -210,6 +211,15 @@ def files(subpath=""):
     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
     return f"<pre>{content}</pre>"
+
+
+@app.route("/ping")
+def ping():
+    host = request.args.get("host", "127.0.0.1")
+    proc = os.popen(f"ping -c 1 {host} 2>&1")
+    output = proc.read()
+    proc.close()
+    return f"<h2>Ping result for {host}</h2><pre>{output}</pre><a href='/'>Назад</a>"
 
 
 if __name__ == "__main__":
