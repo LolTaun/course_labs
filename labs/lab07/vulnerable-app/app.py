@@ -4,8 +4,23 @@ import os
 import subprocess
 import pickle
 import logging
+import ipaddress
+import re
+import ast
+import operator
 
 app = Flask(__name__)
+
+SAFE_OPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+    ast.Pow: operator.pow,
+}
+
 
 app.config["DEBUG"] = True
 
@@ -23,7 +38,7 @@ def get_db():
 
 @app.route("/")
 def index():
-    return "Vulnerable lab07 app v1.0"
+    return "Vulnerable lab07 app is running!"
 
 
 @app.route("/user")
@@ -48,8 +63,11 @@ def search():
 @app.route("/ping")
 def ping():
     host = request.args.get("host", "127.0.0.1")
-    cmd = f"ping -c 1 {host}"  # nosec B605
-    os.system(cmd)
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return "Invalid host", 400
+    subprocess.run(["ping", "-c", "1", host], check=False, timeout=3)
     return f"Pinged {host}"
 
 
@@ -60,33 +78,47 @@ def backup():
     subprocess.call(cmd)
     return f"Backup to {target} started"
 
+# Не имеет смысла, так как нет необходимости показывать файл /etc/passwd, специально выделенной директории для чтения файлов нет.
+# @app.route("/read")
+# def read_file():
+#     path = request.args.get("path", "/etc/passwd")
+#     try:
+#         with open(path, "r") as f:
+#             data = f.read()
+#         return f"<pre>{data}</pre>"
+#     except Exception as e:
+#         return str(e), 500
 
-@app.route("/read")
-def read_file():
-    path = request.args.get("path", "/etc/passwd")
-    try:
-        with open(path, "r") as f:
-            data = f.read()
-        return f"<pre>{data}</pre>"
-    except Exception as e:
-        return str(e), 500
+# Не имеет смысла
+# @app.route("/load")
+# def load():
+#     data = request.args.get("data", "")
+#     try:
+#         obj = pickle.loads(bytes.fromhex(data))  # nosec B301
+#         return f"Loaded object: {obj}"
+#     except Exception as e:
+#         return f"Error: {e}", 500
 
 
-@app.route("/load")
-def load():
-    data = request.args.get("data", "")
-    try:
-        obj = pickle.loads(bytes.fromhex(data))  # nosec B301
-        return f"Loaded object: {obj}"
-    except Exception as e:
-        return f"Error: {e}", 500
+def _eval_ast(node):
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return node.value
+    if isinstance(node, ast.UnaryOp) and type(node.op) in SAFE_OPS:
+        return SAFE_OPS[type(node.op)](_eval_ast(node.operand))
+    if isinstance(node, ast.BinOp) and type(node.op) in SAFE_OPS:
+        return SAFE_OPS[type(node.op)](_eval_ast(node.left), _eval_ast(node.right))
+    raise ValueError("Unsupported expression")
 
 
 @app.route("/calc")
 def calc():
     expr = request.args.get("expr", "1+1")
-    result = eval(expr)  # nosec B307
-    return str(result)
+    try:
+        result = _eval_ast(ast.parse(expr, mode="eval").body)
+        return str(result)
+    except Exception as e:
+        return f"Invalid expression: {e}", 400
+
 
 
 @app.route("/debug")
