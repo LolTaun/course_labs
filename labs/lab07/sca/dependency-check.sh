@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="${ROOT_DIR}/sca/dependency-check-report"
+OUT_DIR="${ROOT_DIR}/sca/dependency-check-report-python-app"
 PROJECT_NAME="lab07-vulnerable-app"
 DATA_DIR="${HOME}/.dependency-check-data"
 
@@ -29,17 +29,20 @@ fi
 
 echo "[*] Running scan using cached data in ${DATA_DIR} (no full re-download)"
 echo "[*] Scanning:"
-echo "    - ${ROOT_DIR}/vulnerable-app"
+echo "    - ${ROOT_DIR}/vulnerable-app/requirements.txt"
 echo "    - ${ROOT_DIR}/sca/lib"
 
 "${DC_CMD}" \
-  --scan "${ROOT_DIR}/vulnerable-app" "${ROOT_DIR}/sca/lib" \
+  --scan "${ROOT_DIR}/vulnerable-app/requirements.txt" "${ROOT_DIR}/sca/lib" \
   --format HTML \
   --format JSON \
   --project "${PROJECT_NAME}" \
   --out "${OUT_DIR}" \
   --data "${DATA_DIR}" \
-  --noupdate
+  --noupdate \
+  --enableExperimental \
+  --log "${OUT_DIR}/dependency-check.log"
+
 
 if command -v jq >/dev/null 2>&1 && [ -f "${OUT_DIR}/dependency-check-report.json" ]; then
   echo "[i] Dependency-Check JSON dependencies count:"
