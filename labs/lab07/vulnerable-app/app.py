@@ -2,10 +2,8 @@ from flask import Flask, request, make_response
 import sqlite3
 import os
 import subprocess
-import pickle
 import logging
 import ipaddress
-import re
 import ast
 import operator
 
@@ -46,7 +44,8 @@ def get_user():
     username = request.args.get("name", "")
     conn = get_db()
     cur = conn.cursor()
-    query = f"SELECT id, name, email FROM users WHERE name = '{username}'"  # nosec B608
+    # nosec B608
+    query = f"SELECT id, name, email FROM users WHERE name = '{username}'"
     app.logger.debug("Executing query: %s", query)
     rows = cur.execute(query).fetchall()
     conn.close()
@@ -78,7 +77,8 @@ def backup():
     subprocess.call(cmd)
     return f"Backup to {target} started"
 
-# Не имеет смысла, так как нет необходимости показывать файл /etc/passwd, специально выделенной директории для чтения файлов нет.
+# Не имеет смысла, так как нет необходимости показывать файл
+# /etc/passwd, специально выделенной директории для чтения файлов нет.
 # @app.route("/read")
 # def read_file():
 #     path = request.args.get("path", "/etc/passwd")
@@ -118,7 +118,6 @@ def calc():
         return str(result)
     except Exception as e:
         return f"Invalid expression: {e}", 400
-
 
 
 @app.route("/debug")
