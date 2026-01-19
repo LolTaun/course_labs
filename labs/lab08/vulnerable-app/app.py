@@ -8,10 +8,23 @@ from flask import (
 )
 import sqlite3
 import os
+import re
+from werkzeug.serving import WSGIRequestHandler
+
 
 app = Flask(__name__)
 
 DB_PATH = os.environ.get("APP_DB_PATH", "app.db")
+
+
+PRIVATE_IP_RE = re.compile(
+    r"(?:127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|"
+    r"172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3})"
+)
+
+
+def redact_private_ips(text: str) -> str:
+    return PRIVATE_IP_RE.sub("[redacted-ip]", text)
 
 
 def init_db():
@@ -45,15 +58,17 @@ def index():
     <p>Пример уязвимого приложения для лабораторной по DAST.</p>
     <ul>
       <li><a href="/echo?msg=Hello">Reflected XSS / echo</a></li>
-      <li><a href="/search?username=admin">SQL Injection / search</a></li>
+      <li><a href="/search">SQL Injection / search</a></li>
       <li><a href="/login">Небезопасный логин</a></li>
       <li><a href="/profile">Профиль (зависит от cookie)</a></li>
       <li><a href="/admin">«Админка» без нормальной авторизации</a></li>
       <li><a href="/files/">Directory listing</a></li>
+      <li><a href="/ping?host=127.0.0.1">Проверка ping</a></li>
     </ul>
     """
     resp = make_response(html)
-    resp.set_cookie("session", "guest-session-id")
+    # Low: HttpOnly + SameSite
+    resp.set_cookie("session", "guest-session-id", httponly=True, samesite="Lax")
     return resp
 
 
@@ -69,9 +84,20 @@ def echo():
     return render_template_string(template)
 
 
-@app.route("/search")
+@app.route("/search", methods=["GET", "POST"])
 def search():
-    username = request.args.get("username", "")
+    # Info: избегаем передачи чувствительных данных в URL — читаем из body при POST
+    username = request.form.get("username")
+    if request.method == "GET" and not username:
+        return """
+        <form method="post">
+            <label>username: <input name="username"></label>
+            <button type="submit">Search</button>
+        </form>
+        """
+    if not username:
+        username = request.args.get("username", "")
+
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     query = f"SELECT id, username, role FROM users WHERE username = '{username}'"  # nosec B608
@@ -87,7 +113,6 @@ def search():
 
     template = """
     <h2>Поиск пользователя</h2>
-    <p>Запрос: <code>{{ query }}</code></p>
     {% if error %}
       <p style="color:red;">SQL error: {{ error }}</p>
     {% endif %}
@@ -212,6 +237,50 @@ def files(subpath=""):
     return f"<pre>{content}</pre>"
 
 
+@app.route("/ping")
+def ping():
+    host = request.args.get("host", "127.0.0.1")
+    proc = os.popen(f"ping -c 1 {host} 2>&1")
+    output = proc.read()
+    proc.close()
+    output = redact_private_ips(output)
+    return f"<h2>Ping result for {host}</h2><pre>{output}</pre><a href='/'>Назад</a>"
+
+
+@app.after_request
+def set_security_headers(resp):
+    # Medium vuln fixes: CSP completeness, anti-clickjacking
+    resp.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'; "
+        "base-uri 'self'"
+    )
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    # Low: X-Content-Type-Options MIME-sniffing
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    # Low: Permissions-Policy
+    resp.headers.setdefault(
+        "Permissions-Policy", "camera=(), geolocation=(), microphone=()"
+    )
+    # Low: mitigate Spectre via isolation headers
+    resp.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    resp.headers.setdefault("Cross-Origin-Embedder-Policy", "require-corp")
+    resp.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    # Info: cache control for sensitive data
+    resp.headers.setdefault("Cache-Control", "private, max-age=300")
+    return resp
+
+
 if __name__ == "__main__":
+    # Low: hide server version
+    WSGIRequestHandler.server_version = "BestSecureServer 1.0"
+    WSGIRequestHandler.sys_version = ""
     init_db()
     app.run(host="0.0.0.0", port=8080, debug=True)  # nosec B201,B104
